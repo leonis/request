@@ -1,27 +1,27 @@
 'use strict'
 
-var request = require('../index') 
-  , server  = require('./server')
-  , tape    = require('tape')
+var request = require('../index')
+var server = require('./server')
+var tape = require('tape')
 
 var s = server.createServer()
 
 var path = '/aws.json'
 
-s.on(path, function(req, res) {
+s.on(path, function (req, res) {
   res.writeHead(200, {
     'Content-Type': 'application/json'
   })
   res.end(JSON.stringify(req.headers))
 })
 
-tape('setup', function(t) {
-  s.listen(s.port, function() {
+tape('setup', function (t) {
+  s.listen(0, function () {
     t.end()
   })
 })
 
-tape('default behaviour: aws-sign2 without sign_version key', function(t) {
+tape('default behaviour: aws-sign2 without sign_version key', function (t) {
   var options = {
     url: s.url + path,
     aws: {
@@ -30,14 +30,15 @@ tape('default behaviour: aws-sign2 without sign_version key', function(t) {
     },
     json: true
   }
-  request(options, function(err, res, body) {    
+  request(options, function (err, res, body) {
+    t.error(err)
     t.ok(body.authorization)
     t.notOk(body['x-amz-date'])
     t.end()
   })
 })
 
-tape('aws-sign4 options', function(t) {
+tape('aws-sign4 options', function (t) {
   var options = {
     url: s.url + path,
     aws: {
@@ -47,14 +48,16 @@ tape('aws-sign4 options', function(t) {
     },
     json: true
   }
-  request(options, function(err, res, body) {    
+  request(options, function (err, res, body) {
+    t.error(err)
     t.ok(body.authorization)
     t.ok(body['x-amz-date'])
+    t.notok(body['x-amz-security-token'])
     t.end()
   })
 })
 
-tape('aws-sign4 options with service,region', function(t) {
+tape('aws-sign4 options with service,region', function (t) {
   var options = {
     url: s.url + path,
     aws: {
@@ -66,7 +69,8 @@ tape('aws-sign4 options with service,region', function(t) {
     },
     json: true
   }
-  request(options, function(err, res, body) {    
+  request(options, function (err, res, body) {
+    t.error(err)
     t.ok(body.authorization)
     var credential = body.authorization.match(/Credential=([^,]+)/)[1]
     var testRegex = /my_key\/[0-9]{8}\/ap-northeast-1\/execute-api\/aws4_request/
@@ -76,19 +80,19 @@ tape('aws-sign4 options with service,region', function(t) {
   })
 })
 
-
-tape('aws-sign4 with sessionToken', function(t) {
+tape('aws-sign4 with sessionToken', function (t) {
   var options = {
     url: s.url + path,
     aws: {
       key: 'my_key',
       secret: 'my_secret',
-      sessionToken: 'my_token',
+      session: 'session',
       sign_version: 4
     },
     json: true
   }
-  request(options, function(err, res, body) {    
+  request(options, function (err, res, body) {
+    t.error(err)
     t.ok(body.authorization)
     t.ok(body['x-amz-date'])
     t.ok(body['x-amz-security-token'])
@@ -96,8 +100,8 @@ tape('aws-sign4 with sessionToken', function(t) {
   })
 })
 
-tape('cleanup', function(t) {
-  s.close(function() {
+tape('cleanup', function (t) {
+  s.close(function () {
     t.end()
   })
 })
